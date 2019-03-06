@@ -172,11 +172,11 @@ def chain_future(a: "Future[_T]", b: "Future[_T]") -> None:
 
 
 def future_set_result_unless_cancelled(
-    future: Union["futures.Future[_T]", "Future[_T]"], value: _T
+    future: "Union[futures.Future[_T], Future[_T]]", value: _T
 ) -> None:
     """Set the given ``value`` as the `Future`'s result, if not cancelled.
 
-    Avoids asyncio.InvalidStateError when calling set_result() on
+    Avoids ``asyncio.InvalidStateError`` when calling ``set_result()`` on
     a cancelled `asyncio.Future`.
 
     .. versionadded:: 5.0
@@ -186,16 +186,16 @@ def future_set_result_unless_cancelled(
 
 
 def future_set_exception_unless_cancelled(
-    future: Union["futures.Future[_T]", "Future[_T]"], exc: BaseException
+    future: "Union[futures.Future[_T], Future[_T]]", exc: BaseException
 ) -> None:
     """Set the given ``exc`` as the `Future`'s exception.
 
     If the Future is already canceled, logs the exception instead. If
     this logging is not desired, the caller should explicitly check
-    the state of the Future and call Future.set_exception instead of
+    the state of the Future and call ``Future.set_exception`` instead of
     this wrapper.
 
-    Avoids asyncio.InvalidStateError when calling set_exception() on
+    Avoids ``asyncio.InvalidStateError`` when calling ``set_exception()`` on
     a cancelled `asyncio.Future`.
 
     .. versionadded:: 6.0
@@ -208,7 +208,7 @@ def future_set_exception_unless_cancelled(
 
 
 def future_set_exc_info(
-    future: Union["futures.Future[_T]", "Future[_T]"],
+    future: "Union[futures.Future[_T], Future[_T]]",
     exc_info: Tuple[
         Optional[type], Optional[BaseException], Optional[types.TracebackType]
     ],
@@ -223,7 +223,7 @@ def future_set_exc_info(
     .. versionchanged:: 6.0
 
        If the future is already cancelled, this function is a no-op.
-       (previously asyncio.InvalidStateError would be raised)
+       (previously ``asyncio.InvalidStateError`` would be raised)
 
     """
     if exc_info[1] is None:
@@ -246,7 +246,7 @@ def future_add_done_callback(
 
 
 def future_add_done_callback(  # noqa: F811
-    future: Union["futures.Future[_T]", "Future[_T]"], callback: Callable[..., None]
+    future: "Union[futures.Future[_T], Future[_T]]", callback: Callable[..., None]
 ) -> None:
     """Arrange to call ``callback`` when ``future`` is complete.
 

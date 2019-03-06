@@ -33,6 +33,7 @@ per `unittest` case.
 import asyncio
 import concurrent.futures
 import datetime
+import functools
 import logging
 import numbers
 import os
@@ -164,7 +165,7 @@ class IOLoop(Configurable):
 
     @classmethod
     def configure(
-        cls, impl: Union[None, str, Type[Configurable]], **kwargs: Any
+        cls, impl: "Union[None, str, Type[Configurable]]", **kwargs: Any
     ) -> None:
         if asyncio is not None:
             from tornado.platform.asyncio import BaseAsyncIOLoop
@@ -663,7 +664,7 @@ class IOLoop(Configurable):
 
     def add_future(
         self,
-        future: Union["Future[_T]", "concurrent.futures.Future[_T]"],
+        future: "Union[Future[_T], concurrent.futures.Future[_T]]",
         callback: Callable[["Future[_T]"], None],
     ) -> None:
         """Schedules a callback on the ``IOLoop`` when the given
@@ -676,10 +677,25 @@ class IOLoop(Configurable):
         awaitables (unlike most of Tornado where the two are
         interchangeable).
         """
-        assert is_future(future)
-        future_add_done_callback(
-            future, lambda future: self.add_callback(callback, future)
-        )
+        if isinstance(future, Future):
+            # Note that we specifically do not want the inline behavior of
+            # tornado.concurrent.future_add_done_callback. We always want
+            # this callback scheduled on the next IOLoop iteration (which
+            # asyncio.Future always does).
+            #
+            # Wrap the callback in self._run_callback so we control
+            # the error logging (i.e. it goes to tornado.log.app_log
+            # instead of asyncio's log).
+            future.add_done_callback(
+                lambda f: self._run_callback(functools.partial(callback, future))
+            )
+        else:
+            assert is_future(future)
+            # For concurrent futures, we use self.add_callback, so
+            # it's fine if future_add_done_callback inlines that call.
+            future_add_done_callback(
+                future, lambda f: self.add_callback(callback, future)
+            )
 
     def run_in_executor(
         self,
@@ -878,7 +894,7 @@ class PeriodicCallback(object):
             self._timeout = None
 
     def is_running(self) -> bool:
-        """Return True if this `.PeriodicCallback` has been started.
+        """Returns ``True`` if this `.PeriodicCallback` has been started.
 
         .. versionadded:: 4.1
         """

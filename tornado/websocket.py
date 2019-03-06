@@ -498,9 +498,9 @@ class WebSocketHandler(tornado.web.RequestHandler):
         implement WebSockets support this header, and non-browser
         clients do not have the same cross-site security concerns).
 
-        Should return True to accept the request or False to reject it.
-        By default, rejects all requests with an origin on a host other
-        than this one.
+        Should return ``True`` to accept the request or ``False`` to
+        reject it. By default, rejects all requests with an origin on
+        a host other than this one.
 
         This is a security protection against cross site scripting attacks on
         browsers, since WebSockets are allowed to bypass the usual same-origin
@@ -520,7 +520,7 @@ class WebSocketHandler(tornado.web.RequestHandler):
            for more.
 
         To accept all cross-origin traffic (which was the default prior to
-        Tornado 4.0), simply override this method to always return true::
+        Tornado 4.0), simply override this method to always return ``True``::
 
             def check_origin(self, origin):
                 return True
@@ -639,7 +639,7 @@ class WebSocketProtocol(abc.ABC):
 
     def _run_callback(
         self, callback: Callable, *args: Any, **kwargs: Any
-    ) -> Optional["Future[Any]"]:
+    ) -> "Optional[Future[Any]]":
         """Runs the given callback with exception handling.
 
         If the callback is a coroutine, returns its Future. On error, aborts the
@@ -948,11 +948,15 @@ class WebSocketProtocol13(WebSocketProtocol):
         self.stream = handler._detach_stream()
 
         self.start_pinging()
-        open_result = self._run_callback(
-            handler.open, *handler.open_args, **handler.open_kwargs
-        )
-        if open_result is not None:
-            await open_result
+        try:
+            open_result = handler.open(*handler.open_args, **handler.open_kwargs)
+            if open_result is not None:
+                await open_result
+        except Exception:
+            handler.log_exception(*sys.exc_info())
+            self._abort()
+            return
+
         await self._receive_frame_loop()
 
     def _parse_extensions_header(
@@ -1200,7 +1204,7 @@ class WebSocketProtocol13(WebSocketProtocol):
             if handled_future is not None:
                 await handled_future
 
-    def _handle_message(self, opcode: int, data: bytes) -> Optional["Future[None]"]:
+    def _handle_message(self, opcode: int, data: bytes) -> "Optional[Future[None]]":
         """Execute on_message, returning its Future if it is a coroutine."""
         if self.client_terminated:
             return None
@@ -1281,7 +1285,7 @@ class WebSocketProtocol13(WebSocketProtocol):
             )
 
     def is_closing(self) -> bool:
-        """Return true if this connection is closing.
+        """Return ``True`` if this connection is closing.
 
         The connection is considered closing if either side has
         initiated its closing handshake or if the stream has been
@@ -1563,7 +1567,7 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
 
     def log_exception(
         self,
-        typ: Optional[Type[BaseException]],
+        typ: "Optional[Type[BaseException]]",
         value: Optional[BaseException],
         tb: Optional[TracebackType],
     ) -> None:
